@@ -1,24 +1,27 @@
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.chrome.service import Service
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
-import time, os, re, pprint, ast
+import time, datetime, os, re, pprint, ast
 from deepdiff import DeepDiff
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
-cwd = os.getcwd()
+#cwd = os.getcwd()
+
+cwd = '/home/pi/Documents/padel_bookings/'
 
 VERSION = '1.0.0'
 
-PREV_BOOKINGS = '/bookings/previous_bookings.txt'
-LATEST_BOOKINGS = '/bookings/latest_bookings.txt'
-LATEST_DIFFS = '/bookings/latest_differences.txt'
+PREV_BOOKINGS = 'bookings/previous_bookings.txt'
+LATEST_BOOKINGS = 'bookings/latest_bookings.txt'
+LATEST_DIFFS = 'bookings/latest_differences.txt'
 
-MAILING_LIST = ['ollie.f.wells@gmail.com']
+MAILING_LIST = [
+    'ollie.f.wells@gmail.com'
+    ]
 
 class PadelBot(webdriver.Chrome):
     def __init__(self, service, options):
@@ -26,16 +29,16 @@ class PadelBot(webdriver.Chrome):
 
     def get_date(self):
         self.implicitly_wait(5)
-        time.sleep(5)
+        time.sleep(3)
         date_element = self.find_element(By.ID, 'picker_daily')
-        time.sleep(5)
+        time.sleep(3)
         date = date_element.text
         return date
 
     def next_date(self):
         self.implicitly_wait(5)
         print("Clicking next date...")
-        time.sleep(10)
+        time.sleep(5)
         try:
             self.find_element(By.CLASS_NAME, 'ti-angle-right').click()
         except StaleReferenceException as e:
@@ -44,7 +47,7 @@ class PadelBot(webdriver.Chrome):
             self.find_element(By.CLASS_NAME, 'ti-angle-right').click()
 
     def get_slots(self):
-        time.sleep(5)
+        time.sleep(3)
         self.implicitly_wait(5)        
         grid = {}
         slots = self.find_elements(By.CLASS_NAME, 'slot')
@@ -138,7 +141,7 @@ def send_email(bookings):
 
     msg = MIMEMultipart('related')
     
-    with open(f'{cwd}/report_email.html', 'rb') as f:
+    with open(f'{cwd}report_email.html', 'rb') as f:
         email_body = f.read().decode('UTF-8')
 
     for k,v in email_params.items():
@@ -167,6 +170,8 @@ service = Service('/usr/bin/chromedriver')
 bot = PadelBot(service=service, options=chrome_options)
 
 try:
+    print("****************************")
+    print("Starting bot at ", datetime.datetime.now())
     # URL of the website to be scraped
     url = "https://www.matchi.se/facilities/g4pthepadelyard"
 
@@ -210,7 +215,6 @@ try:
             print("** Other New Slots **")
             pprint.pprint(report['other'])
 
-            send_email(email_params)
         else:
             print("No new slots")
     else:
@@ -220,11 +224,5 @@ try:
 
 finally:
     # Close the browser
+    print("Ending bot at ", datetime.datetime.now())
     bot.quit()
-    
-    email_params = {'{version}': VERSION,
-                            '{favourites}':"cron_working",
-                            '{other}': "hello from cron",
-                            '{error}':''
-                            }
-    send_email(email_params)
